@@ -12,6 +12,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import xgboost as xgb
 
+# Konfigurasi Halaman Streamlit
 st.set_page_config(
     page_title="Mobile Price Classification App",
     page_icon="📱",
@@ -56,80 +57,3 @@ if train_file is not None:
         if 'battery_power' in train_df.columns:
             sns.kdeplot(ax=axes[1], data=train_df, x='battery_power', label='Train Data', fill=True, alpha=0.5, color='blue')
             if test_df is not None and 'battery_power' in test_df.columns:
-                sns.kdeplot(ax=axes[1], data=test_df, x='battery_power', label='Test Data', fill=True, alpha=0.5, color='orange')
-            axes[1].set_title('Perbandingan Distribusi Battery Power')
-            axes[1].set_xlabel('Battery Power')
-            axes[1].set_ylabel('Density')
-            axes[1].legend()
-        
-        plt.tight_layout()
-        st.pyplot(fig)
-
-    # ==========================================
-    # TAB 2: Model Training
-    # ==========================================
-    with tab2:
-        st.subheader("Pelatihan Model Machine Learning")
-        
-        if 'price_range' not in train_df.columns:
-            st.error("Kolom target 'price_range' tidak ditemukan di data training.")
-        else:
-            test_size = st.slider("Ukuran Data Validasi (Test Size)", 0.1, 0.4, 0.2, 0.05)
-            
-            X = train_df.drop(columns=['price_range'])
-            if 'id' in X.columns:
-                X = X.drop(columns=['id'])
-            y = train_df['price_range']
-
-            X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=test_size, random_state=42, stratify=y
-            )
-
-            scaler = StandardScaler()
-            X_train_scaled = scaler.fit_transform(X_train)
-            X_val_scaled = scaler.transform(X_val)
-
-            models = {
-                'Logistic Regression': (LogisticRegression(max_iter=1000, random_state=42), True),
-                'Random Forest': (RandomForestClassifier(random_state=42, n_estimators=100), False),
-                'XGBoost': (xgb.XGBClassifier(random_state=42, eval_metric='mlogloss'), False),
-                'Linear Discriminant Analysis (LDA)': (LinearDiscriminantAnalysis(), True)
-            }
-
-            if st.button("Mulai Latih Model", type="primary"):
-                results = {}
-                trained_models = {}
-                val_cm = {}
-
-                with st.spinner("Melatih model..."):
-                    for name, (clf, use_scaled) in models.items():
-                        X_tr = X_train_scaled if use_scaled else X_train
-                        X_vl = X_val_scaled if use_scaled else X_val
-                        
-                        clf.fit(X_tr, y_train)
-                        preds = clf.predict(X_vl)
-                        
-                        results[name] = accuracy_score(y_val, preds)
-                        trained_models[name] = (clf, use_scaled)
-                        val_cm[name] = confusion_matrix(y_val, preds)
-
-                st.session_state['trained_models'] = trained_models
-                st.session_state['scaler'] = scaler
-                st.session_state['results'] = results
-                st.session_state['val_cm'] = val_cm
-                st.session_state['feature_columns'] = list(X.columns)
-
-                st.success("Pelatihan selesai!")
-
-            if 'results' in st.session_state:
-                res_df = pd.DataFrame(list(st.session_state['results'].items()), columns=['Model', 'Akurasi'])
-                res_df = res_df.sort_values(by='Akurasi', ascending=False).reset_index(drop=True)
-                
-                col_res1, col_res2 = st.columns([1, 2])
-                with col_res1:
-                    st.write("### Perbandingan Akurasi")
-                    st.dataframe(res_df.style.format({'Akurasi': '{:.4f}'}))
-                
-                with col_res2:
-                    fig_acc, ax_acc = plt.subplots(figsize=(6, 3))
-                    sns.barplot(data=res_df, x='Akurasi', y='
